@@ -1,0 +1,79 @@
+# ------------------------------------------------------------------------------
+# Debugging
+# ------------------------------------------------------------------------------
+
+# Print a variable
+#
+# Lets you see what make has stored in a target. Defines a recipe for a new
+# target "print-[WILDCARD]", so that when you run `make print-foo`, you'll
+# see what's stored in 'foo'
+#
+print-%  : ; @echo $* = $($*)
+
+
+# ------------------------------------------------------------------------------
+# File Wrangling
+# ------------------------------------------------------------------------------
+
+# Return just a file name: "dir/script.R" -> "script"
+#
+# Arguments:
+# 1: A filepath
+#
+# Example: $(call file_slug,dir/script.R)
+# Output:  script
+#
+file_slug = $(basename $(notdir $(1)))
+
+
+# Split a file slug into words by underscore
+split_slug = $(subst _, ,$(call file_slug,$(1)))
+
+
+# Extract the nth underscore-separated element from a file slug
+slug_segment = $(word $(1),$(call split_slug,$(2)))
+
+
+# ------------------------------------------------------------------------------
+# Multi Targeting
+# ------------------------------------------------------------------------------
+
+# Allows you to target many files with a single recipe
+# Useful when one script writes many outputs
+#
+# Works by replacing the "." character in a filename with "%", the wildcard.
+# If "." isn't a character you can replace, this will work so long as you change
+# the "." to a character string shared by all the targets. In the example
+# below, you could change ".", to "pdf".
+# 
+# For details: https://stackoverflow.com/a/3077254
+#
+# Example:
+#
+# graphs = a.pdf b.pdf c.pdf
+# $(target_all, $(graphs)) : plot.R
+#   Rscript --vanilla plot.R
+#
+target_all = $(subst .,%,$(1))
+
+
+# ------------------------------------------------------------------------------
+# R
+# ------------------------------------------------------------------------------
+
+# Run and log an R script
+#
+# Arguments:
+# 1: A filepath to an R script
+#
+# Details:
+# Runs an R script and places the results in a .log file sharing the
+# same base name as the script. So running "foo.R" creates "foo.log".
+#
+# You'll need to add a prefix before the first $(1) if the R script lives
+# in a different directory than where make sits when calling it.
+#
+# You may want to prefix the location of the log file, for example if
+# you want all log files in a log/ subdirectory.
+#
+r = Rscript --vanilla --verbose $(1) > $(call file_slug, $(1)).log 2>&1
